@@ -2,6 +2,7 @@
 import GradientHeader from './components/GradientHeader.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import navData from './data/tools.json';
+import SearchBox from './components/SearchBox.vue';
 
 function getRandomGradient() {
   const colors = [
@@ -24,7 +25,45 @@ const categories = computed(() => {
 const activeCategory = ref('');
 const selectedKeys = ref([]);
 
+// 搜索相关
+const searchText = ref('');
+const searchActive = ref(false);
+const searchResults = ref([]);
+
+function splitWords(text) {
+  // 简单分词：按空格、中文、英文、数字分割
+  return text.toLowerCase().split(/[^\u4e00-\u9fa5\w]+/).filter(Boolean);
+}
+
+function highlightKeyword(text, keyword) {
+  if (!keyword) return text;
+  // 支持多个关键词高亮
+  let words = splitWords(keyword);
+  let pattern = words.filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  if (!pattern) return text;
+  let reg = new RegExp(`(${pattern})`, 'gi');
+  return text.replace(reg, '<span class="highlight">$1</span>');
+}
+
+function doSearch(val) {
+  const kw = (typeof val === 'string' ? val : searchText.value).trim();
+  if (!kw) {
+    searchActive.value = false;
+    searchResults.value = [];
+    return;
+  }
+  searchActive.value = true;
+  const words = splitWords(kw);
+  searchResults.value = navData.filter(item => {
+    const target = [item.name, item.desc, item.catelog].join(' ').toLowerCase();
+    return words.every(w => target.includes(w));
+  });
+}
+
 const filteredData = computed(() => {
+  if (searchActive.value) {
+    return searchResults.value;
+  }
   if (!activeCategory.value) {
     return [];
   }
@@ -35,6 +74,10 @@ watch(activeCategory, (newValue) => {
   selectedKeys.value = [newValue];
   generateCardGradients();
   headerGradient.value = getRandomGradient();
+  if (searchActive.value) {
+    searchActive.value = false;
+    searchText.value = '';
+  }
 });
 
 onMounted(() => {
@@ -56,6 +99,9 @@ function generateCardGradients() {
 <template>
   <div class="app-header">
     <div class="app-title">开发者导航</div>
+    <div class="search-box-wrapper">
+      <SearchBox v-model="searchText" @search="doSearch" :highlight-words="splitWords(searchText)" />
+    </div>
   </div>
   <div class="nav-container">
     <!-- 左侧分类导航 -->
@@ -71,19 +117,24 @@ function generateCardGradients() {
     <div class="divider"></div>
     <!-- 右侧内容区 -->
     <div class="content-area">
-      <GradientHeader :gradient="headerGradient">{{ activeCategory }}</GradientHeader>
+      <GradientHeader :gradient="headerGradient">{{ searchActive ? '搜索结果' : activeCategory }}</GradientHeader>
       <div class="site-cards-grid">
         <a-card v-for="(item, idx) in filteredData" :key="item.name" class="site-card" hoverable>
           <template #title>
-            <a :href="item.url" target="_blank">{{ item.name }}</a>
+            <a :href="item.url" target="_blank" v-html="highlightKeyword(item.name, searchActive ? searchText : '')"></a>
           </template>
           <template #extra>
             <a-tag color="blue">{{ item.catelog }}</a-tag>
           </template>
-          <GradientHeader :gradient="cardGradients[idx]">{{ item.name }}</GradientHeader>
-          <p class="desc-ellipsis" :title="item.desc">{{ item.desc.length > 6 ? item.desc.slice(0, 6) + '...' : item.desc }}</p>
+          <GradientHeader :gradient="cardGradients[idx]">
+            <span v-html="highlightKeyword(item.name, searchActive ? searchText : '')"></span>
+          </GradientHeader>
+          <p class="desc-ellipsis" :title="item.desc">
+            <span v-html="highlightKeyword(item.desc.length > 6 ? item.desc.slice(0, 6) + '...' : item.desc, searchActive ? searchText : '')"></span>
+          </p>
         </a-card>
       </div>
+      <div v-if="searchActive && filteredData.length === 0" class="no-result">未找到相关结果</div>
     </div>
   </div>
 </template>
@@ -103,19 +154,68 @@ body {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 56px;
+  height: auto;
   background: linear-gradient(90deg, #36d1c4, #5b86e5);
   display: flex;
+  flex-direction: column;
   align-items: center;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding-bottom: 8px;
 }
 .app-title {
   color: #fff;
   font-size: 22px;
   font-weight: bold;
-  margin-left: 32px;
+  margin-left: 0;
   letter-spacing: 2px;
+  margin-top: 8px;
+}
+.search-box-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+.search-box {
+  margin-left: 32px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.search-input {
+  height: 32px;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+  padding: 0 36px 0 16px;
+  font-size: 15px;
+  outline: none;
+  transition: border 0.2s;
+}
+.search-input:focus {
+  border: 1.5px solid #36d1c4;
+}
+.search-clear {
+  position: absolute;
+  right: 10px;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+  user-select: none;
+}
+.highlight {
+  background: #ffe58f;
+  color: #d46b08;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.no-result {
+  color: #999;
+  text-align: center;
+  margin-top: 40px;
+  font-size: 18px;
 }
 .nav-container {
   display: flex;
@@ -133,7 +233,7 @@ body {
 }
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(1, 0.2fr);
+  grid-template-columns: repeat(1, 1fr);
   gap: 16px 12px;
   margin-top: 16px;
 }
@@ -197,7 +297,7 @@ h2 {
     grid-template-columns: repeat(2, 1fr);
   }
   .category-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(1, 1fr);
   }
   .category-item {
     width: 140px;
