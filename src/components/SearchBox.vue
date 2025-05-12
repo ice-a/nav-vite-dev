@@ -94,4 +94,34 @@ function highlightInput(text, words) {
   border-radius: 2px;
   padding: 0 2px;
 }
+@media (max-width: 768px) {
+  .search-box-centered {
+    margin: 10px 0 0 0;
+  }
+  .search-input {
+    min-width: 180px;
+    font-size: 13px;
+    height: 28px;
+    padding: 0 30px 0 10px;
+  }
+  .search-clear {
+    font-size: 16px;
+    right: 6px;
+  }
+}
+@media (max-width: 480px) {
+  .search-box-centered {
+    margin: 6px 0 0 0;
+  }
+  .search-input {
+    min-width: 120px;
+    font-size: 12px;
+    height: 24px;
+    padding: 0 24px 0 8px;
+  }
+  .search-clear {
+    font-size: 14px;
+    right: 4px;
+  }
+}
 </style>

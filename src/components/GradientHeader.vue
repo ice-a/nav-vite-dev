@@ -27,4 +27,20 @@ const props = defineProps({
   border-radius: 8px 8px 0 0;
   margin-bottom: 8px;
 }
+
+@media (max-width: 768px) {
+  .gradient-header {
+    font-size: 15px;
+    height: 40px;
+    border-radius: 0;
+    margin-bottom: 4px;
+  }
+}
+@media (max-width: 480px) {
+  .gradient-header {
+    font-size: 13px;
+    height: 32px;
+    padding: 0 4px;
+  }
+}
 </style>
